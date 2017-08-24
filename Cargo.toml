@@ -1,0 +1,9 @@
+[package]
+name = "overgg-scraper"
+version = "0.1.0"
+authors = ["Cldfire"]
+
+[dependencies]
+reqwest = "0.7"
+error-chain = "0.10"
+scraper = "0.4"
