@@ -49,6 +49,34 @@ pub enum MatchBrief {
 }
 
 impl MatchBrief {
+    /// Getter for the `event` field.
+    #[inline]
+    pub fn event(&self) -> &EventInfo {
+        use MatchBrief::*;
+
+        match self {
+            &InFuture(ref info) |
+            &Live(ref info) |
+            &Completed(ref info) => {
+                &(info.event)
+            }
+        }
+    }
+
+    /// Getter for the `teams` field.
+    #[inline]
+    pub fn teams(&self) -> &[TeamCompletedMatchBriefInfo; 2] {
+        use MatchBrief::*;
+
+        match self {
+            &InFuture(ref info) |
+            &Live(ref info) |
+            &Completed(ref info) => {
+                &(info.teams)
+            }
+        }
+    }
+
     /// Determines which team won the match.
     ///
     /// Will be `None` if neither team won (match could be a draw or just not finished).
@@ -65,7 +93,23 @@ impl MatchBrief {
         }
     }
 
-    pub fn set_team_name(&mut self, team: Team, val: String) {
+    /// Determines which team lost the match.
+    ///
+    /// Will be `None` if neither team lost (match could be a draw or just not finished).
+    #[inline]
+    pub fn loser(&self) -> Option<&TeamCompletedMatchBriefInfo> {
+        use MatchBrief::*;
+
+        match self {
+            &Completed(ref info) => {
+                info.loser()
+            }
+            &InFuture(_) |
+            &Live(_) => None
+        }
+    }
+
+    pub(crate) fn set_team_name(&mut self, team: Team, val: String) {
         use MatchBrief::*;
         use self::Team::*;
 
@@ -81,7 +125,7 @@ impl MatchBrief {
         }
     }
 
-    pub fn set_team_maps_won(&mut self, team: Team, val: u8) {
+    pub(crate) fn set_team_maps_won(&mut self, team: Team, val: u8) {
         use MatchBrief::*;
         use self::Team::*;
 
@@ -120,6 +164,20 @@ impl MatchBriefInfo {
             None
         }
     }
+
+    /// Determines which team lost the match.
+    ///
+    /// Will be `None` if neither team lost (match was a draw).
+    #[inline]
+    pub fn loser(&self) -> Option<&TeamCompletedMatchBriefInfo> {
+        if self.teams[0].maps_won < self.teams[1].maps_won {
+            Some(&(self.teams[0]))
+        } else if self.teams[0].maps_won > self.teams[1].maps_won {
+            Some(&(self.teams[1]))
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -129,31 +187,23 @@ pub struct TeamCompletedMatchBriefInfo {
     pub maps_won: Option<u8>
 }
 
+#[derive(Default, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct EventInfo {
+    pub name: String,
+    pub series: String
+}
+
+// TODO: Finish the beneath draft
+
 pub struct CompletedMatch {
     pub match_type: MatchType,
     pub event: EventInfo,
     pub scheduled_time: Option<DateTime<Utc>>,
     // TODO: Streams
-    pub team_zero: TeamCompletedMatchInfo,
-    pub team_one: TeamCompletedMatchInfo
+    pub teams: [TeamCompletedMatchInfo; 2]
     // TODO: Comments
     // TODO: Map vods
-}
-
-impl CompletedMatch {
-    /// Determines which team won the match.
-    ///
-    /// Will be `None` if neither team won (match was a draw).
-    #[inline]
-    pub fn winner(&self) -> Option<&TeamCompletedMatchInfo> {
-        if self.team_zero.maps_won > self.team_one.maps_won {
-            Some(&(self.team_zero))
-        } else if self.team_zero.maps_won < self.team_one.maps_won {
-            Some(&(self.team_one))
-        } else {
-            None
-        }
-    }
 }
 
 pub struct TeamCompletedMatchInfo {
@@ -161,11 +211,4 @@ pub struct TeamCompletedMatchInfo {
     pub ranking: i32,
     pub maps_won: u8,
     // TODO: Map info
-}
-
-#[derive(Default, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct EventInfo {
-    pub name: String,
-    pub series: String
 }

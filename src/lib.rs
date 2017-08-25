@@ -196,7 +196,25 @@ mod test {
         let scraper = Scraper::new().unwrap();
         let matches = scraper.matches_brief(Completed).unwrap();
 
-        println!("{:#?}", matches);
+        for _match in matches {
+            // Make sure we got distinct event info
+            assert!(_match.event().name != "");
+            assert!(_match.event().series != "");
+            assert!(_match.event().name != _match.event().series);
+
+            // Make sure we got a value for maps won
+            assert!(!_match.teams()[0].maps_won.is_none());
+            assert!(!_match.teams()[1].maps_won.is_none());
+
+            // Make sure we got distinct team names
+            assert!(_match.teams()[0].name != "");
+            assert!(_match.teams()[1].name != "");
+            assert!(_match.teams()[0].name != _match.teams()[1].name);
+
+            // Make sure that the methods to determine winner / loser work correctly
+            assert!(_match.winner().unwrap() != _match.loser().unwrap());
+            assert!(_match.winner().unwrap().maps_won > _match.loser().unwrap().maps_won);
+        }
     }
 
     #[test]
@@ -204,7 +222,25 @@ mod test {
         let scraper = Scraper::new().unwrap();
         let matches = scraper.matches_brief(InFuture).unwrap();
 
-        println!("{:#?}", matches);
+        for _match in matches {
+            // Make sure we got distinct event info
+            assert!(_match.event().name != "");
+            assert!(_match.event().series != "");
+            assert!(_match.event().name != _match.event().series);
+
+            // Make sure we didn't get a value for maps won
+            assert!(_match.teams()[0].maps_won.is_none());
+            assert!(_match.teams()[1].maps_won.is_none());
+
+            // Make sure we got distinct team names
+            assert!(_match.teams()[0].name != "");
+            assert!(_match.teams()[1].name != "");
+            assert!(_match.teams()[0].name != _match.teams()[1].name);
+
+            // Make sure that the methods to determine winner / loser work correctly
+            assert!(_match.winner().is_none());
+            assert!(_match.loser().is_none());
+        }
     }
 
     #[test]
@@ -212,7 +248,25 @@ mod test {
         let scraper = Scraper::new().unwrap();
         let matches = scraper.matches_brief(Live).unwrap();
 
-        println!("{:#?}", matches);
+        for _match in matches {
+            // Make sure we got distinct event info
+            assert!(_match.event().name != "");
+            assert!(_match.event().series != "");
+            assert!(_match.event().name != _match.event().series);
+
+            // Make sure we got a value for maps won
+            assert!(!_match.teams()[0].maps_won.is_none());
+            assert!(!_match.teams()[1].maps_won.is_none());
+
+            // Make sure we got distinct team names
+            assert!(_match.teams()[0].name != "");
+            assert!(_match.teams()[1].name != "");
+            assert!(_match.teams()[0].name != _match.teams()[1].name);
+
+            // Make sure that the methods to determine winner / loser work correctly
+            assert!(_match.winner().is_none());
+            assert!(_match.loser().is_none());
+        }
     }
 }
 
