@@ -11,7 +11,8 @@ use error::*;
 use reqwest::{Client, IntoUrl};
 use scraper::{Html, Selector};
 use chrono::{Utc, TimeZone, LocalResult};
-use data_structs::CompletedMatchBrief;
+use data_structs::{EventInfo, MatchBrief, MatchBriefType, TeamCompletedMatchBriefInfo};
+use data_structs::MatchBriefType::*;
 use std::io::Read;
 
 pub struct Scraper {
@@ -37,30 +38,15 @@ impl Scraper {
         }
     }
 
-    /// Gets the main page (https://www.over.gg/) and extracts the completed
-    /// match info available there for all listed matches.
+    /// Gets the main page (https://www.over.gg/) and extracts match info for all
+    /// of the matches of the the given `MatchBriefType`.
     #[inline]
-    pub fn matches_brief(&self) -> Result<Vec<CompletedMatchBrief>> {
-        fn set_team_name(data: &mut CompletedMatchBrief, idx: usize, val: String) {
-            if idx == 0 {
-                data.team_zero.name = val;
-            } else {
-                data.team_one.name = val;
-            }
-        }
-
-        fn set_team_maps_won(data: &mut CompletedMatchBrief, idx: usize, val: u8) {
-            if idx == 0 {
-                data.team_zero.maps_won = val;
-            } else {
-                data.team_one.maps_won = val;
-            }
-        }
-
+    pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
         let html = self.get_string("https://www.over.gg/")?;
         let doc = Html::parse_document(&html);
         let mut matches = vec![];
 
+        // TODO: Get this out of the code and into a config file
         let completed_matches_sel = 
             Selector::parse("div.wf-module.wf-card.mod-home-matches").unwrap();
         let header_sel = Selector::parse("div.wf-module-header").unwrap();
@@ -71,6 +57,7 @@ impl Scraper {
         let team_name_sel = Selector::parse("div.h-match-team-name").unwrap();
         let team_score_sel = Selector::parse("div.h-match-team-score.mod-count").unwrap();
         let match_scheduled_time_sel = Selector::parse("div.h-match-preview-time").unwrap();
+        let timestamp_attr_name = "data-utc-ts";
 
         // First we get the list of completed matches
         for list in doc.select(&completed_matches_sel) {
@@ -79,19 +66,24 @@ impl Scraper {
                 None => bail!(ErrorKind::ExtractionError(html))
             };
             
-            if header_text.trim() == "completed matches" {
+            if header_text.trim() == String::from(_type) {
                 // Now we get information for each match
                 for _match in list.select(&match_sel) {
-                    let mut match_info = CompletedMatchBrief::default();
+                    let mut event = EventInfo::default();
+                    let mut teams_info = [
+                        TeamCompletedMatchBriefInfo::default(),
+                        TeamCompletedMatchBriefInfo::default()
+                    ];
+                    let mut scheduled_time = None;
 
                     // Event name
                     if let Some(elem) = _match.select(&event_name_sel).next() {
-                        match_info.event.name = elem.text().collect::<String>().trim().into();
+                        event.name = elem.text().collect::<String>().trim().into();
                     }
 
                     // Event series
                     if let Some(elem) = _match.select(&event_series_sel).next() {
-                        match_info.event.series = elem.text().collect::<String>().trim().into();
+                        event.series = elem.text().collect::<String>().trim().into();
                     }
 
                     let mut teams = _match.select(&teams_sel);
@@ -100,37 +92,59 @@ impl Scraper {
                         if let Some(team) = teams.next() {
                             // Team name
                             if let Some(elem) = team.select(&team_name_sel).next() {
-                                let name = elem.text().collect::<String>().trim().into();
-                                
-                                set_team_name(&mut match_info, i, name);
+                                teams_info[i].name = elem.text().collect::<String>().trim().into();
                             }
 
                             // Team won maps count
-                            if let Some(elem) = team.select(&team_score_sel).next() {
-                                // TODO: Is just setting this to 0 when it fails to parse acceptable
-                                let count = elem.text()
-                                                .collect::<String>()
-                                                .trim()
-                                                .parse()
-                                                .unwrap_or(0);
-
-                                set_team_maps_won(&mut match_info, i, count);
+                            if _type == Completed {
+                                if let Some(elem) = team.select(&team_score_sel).next() {
+                                    // TODO: Is just setting this to 0 when it fails to parse acceptable
+                                    teams_info[i].maps_won = elem.text()
+                                                                .collect::<String>()
+                                                                .trim()
+                                                                .parse()
+                                                                .unwrap_or(0);
+                                }
                             }
                         }
                     }
 
                     // Scheduled match time
                     if let Some(elem) = _match.select(&match_scheduled_time_sel).next() {
-                        if let Some(val) = elem.value().attr("data-utc-ts") {
+                        if let Some(val) = elem.value().attr(timestamp_attr_name) {
                             if let Ok(timestamp) = val.trim().parse() {
                                 if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
-                                    match_info.scheduled_time = Some(datetime);
+                                    scheduled_time = Some(datetime);
                                 }
                             }
                         }
                     }
 
-                    matches.push(match_info);
+                    matches.push(match _type {
+                        InFuture => {
+                            MatchBrief::InFuture {
+                                event,
+                                team_names: [
+                                    // TODO: Why do I have to clone here
+                                    teams_info[0].name.clone(),
+                                    teams_info[1].name.clone()
+                                ],
+                                scheduled_time
+                            }
+                        },
+
+                        Live => {
+                            MatchBrief::Live{} // TODO: Live
+                        },
+
+                        Completed => {
+                            MatchBrief::Completed {
+                                event,
+                                teams: teams_info,
+                                scheduled_time
+                            }
+                        },
+                    });
                 }
             }
         }
@@ -162,9 +176,17 @@ mod test {
     use super::*;
 
     #[test]
-    fn matches_brief() {
+    fn completed_matches_brief() {
         let scraper = Scraper::new().unwrap();
-        let matches = scraper.matches_brief().unwrap();
+        let matches = scraper.matches_brief(Completed).unwrap();
+
+        println!("{:#?}", matches);
+    }
+
+    #[test]
+    fn future_matches_brief() {
+        let scraper = Scraper::new().unwrap();
+        let matches = scraper.matches_brief(InFuture).unwrap();
 
         println!("{:#?}", matches);
     }
