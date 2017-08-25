@@ -1,3 +1,30 @@
+/*!
+A small Rust library to scrape useful data from [over.gg](https://www.over.gg/).
+
+[over.gg](https://www.over.gg/) is a site that hosts articles, discussion,
+team information, match results, and upcoming / live match information for the
+competitive Overwatch scene. It unfortunately does not provide any kind of API
+to access its extremely useful data, which is why this scraper has to exist.
+
+This library currently only supports scraping a small amount of data from the
+site. I may or may not add support for collecting more data as time and interest
+allow. Contributions are certainly welcome!
+
+There are currently two kinds of tests that this library employs: one that
+grabs HTML from the live site and runs some assertions on the output, and
+another that uses locally provided HTML files to ensure that extraction
+of data from the HTML does not change. The local dataset is not staged in
+the repo in an attempt to remain legal :), so you will have to provide your
+own dataset in order to run the local test variety. This is currently as simple
+as saving the [over.gg](https://www.over.gg/) page HTML to
+`test_data/www.over.gg.html` via your web browser. If more data extraction gets
+added in the future you will likely have to provide more pages.
+
+Finally, please use this library responsibly. It is intended for occasional
+programmatic retrieval of data from the [over.gg](https://www.over.gg/) site and
+nothing more.
+*/
+
 #[macro_use]
 extern crate error_chain;
 extern crate reqwest;
@@ -10,8 +37,8 @@ extern crate serde;
 #[cfg(test)]
 extern crate serde_json;
 
-mod error;
-mod data_structs;
+pub mod error;
+pub mod data_structs;
 #[cfg(test)]
 #[cfg(feature = "test-local-data")]
 mod test_utils;
