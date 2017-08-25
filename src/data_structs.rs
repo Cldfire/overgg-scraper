@@ -9,6 +9,7 @@ pub enum MatchType {
 
 /// Used to specify whether completed or future matches should be extracted.
 #[derive(Debug, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MatchBriefType {
     InFuture,
     Live,
@@ -28,12 +29,14 @@ impl From<MatchBriefType> for String {
 
 /// Used to statically type the two teams in a match.
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Team {
     Zero,
     One
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MatchBrief {
     /// A match that has not been played yet.
     InFuture(MatchBriefInfo),
@@ -46,6 +49,22 @@ pub enum MatchBrief {
 }
 
 impl MatchBrief {
+    /// Determines which team won the match.
+    ///
+    /// Will be `None` if neither team won (match could be a draw or just not finished).
+    #[inline]
+    pub fn winner(&self) -> Option<&TeamCompletedMatchBriefInfo> {
+        use MatchBrief::*;
+
+        match self {
+            &Completed(ref info) => {
+                info.winner()
+            }
+            &InFuture(_) |
+            &Live(_) => None
+        }
+    }
+
     pub fn set_team_name(&mut self, team: Team, val: String) {
         use MatchBrief::*;
         use self::Team::*;
@@ -79,14 +98,32 @@ impl MatchBrief {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MatchBriefInfo {
     pub event: EventInfo,
     pub teams: [TeamCompletedMatchBriefInfo; 2],
     pub scheduled_time: Option<DateTime<Utc>>
 }
 
-#[derive(Default, Debug)]
+impl MatchBriefInfo {
+    /// Determines which team won the match.
+    ///
+    /// Will be `None` if neither team won (match was a draw).
+    #[inline]
+    pub fn winner(&self) -> Option<&TeamCompletedMatchBriefInfo> {
+        if self.teams[0].maps_won > self.teams[1].maps_won {
+            Some(&(self.teams[0]))
+        } else if self.teams[0].maps_won < self.teams[1].maps_won {
+            Some(&(self.teams[1]))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TeamCompletedMatchBriefInfo {
     pub name: String,
     pub maps_won: Option<u8>
@@ -126,7 +163,8 @@ pub struct TeamCompletedMatchInfo {
     // TODO: Map info
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EventInfo {
     pub name: String,
     pub series: String

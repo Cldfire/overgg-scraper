@@ -2,6 +2,9 @@ use reqwest::StatusCode;
 
 error_chain! {
     foreign_links {
+        Json(::serde_json::Error)
+        #[cfg(test)]
+        #[cfg(feature = "test-local-data")];
         Io(::std::io::Error);
         Req(::reqwest::Error);
     }

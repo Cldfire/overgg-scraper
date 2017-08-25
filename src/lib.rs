@@ -3,9 +3,18 @@ extern crate error_chain;
 extern crate reqwest;
 extern crate scraper;
 extern crate chrono;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
+#[cfg(feature = "serde")]
+#[cfg(test)]
+extern crate serde_json;
 
 mod error;
 mod data_structs;
+#[cfg(test)]
+#[cfg(feature = "test-local-data")]
+mod test_utils;
 
 use error::*;
 use reqwest::{Client, IntoUrl};
@@ -14,6 +23,9 @@ use chrono::{Utc, TimeZone, LocalResult};
 use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType};
 use data_structs::MatchBriefType::*;
 use std::io::Read;
+
+#[cfg(feature = "test-local-data")]
+const TEST_DATA_MAIN_PAGE: &'static str = include_str!("../test_data/www.over.gg.html");
 
 pub struct Scraper {
     client: Client
@@ -42,7 +54,13 @@ impl Scraper {
     /// of the matches of the the given `MatchBriefType`.
     #[inline]
     pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
-        let html = self.get_string("https://www.over.gg/")?;
+        let html;
+
+        #[cfg(feature = "test-local-data")] { html = TEST_DATA_MAIN_PAGE.to_string(); }
+        #[cfg(not(feature = "test-local-data"))] {
+            html = self.get_string("https://www.over.gg/")?;
+        }
+
         let doc = Html::parse_document(&html);
         let mut matches_info = vec![];
 
@@ -116,9 +134,9 @@ impl Scraper {
                             // Team won maps count
                             if let Some(elem) = team.select(&team_score_sel).next() {
                                 match_info.teams[i].maps_won = match elem.text()
-                                                                            .collect::<String>()
-                                                                            .trim()
-                                                                            .parse() {
+                                                                         .collect::<String>()
+                                                                         .trim()
+                                                                         .parse() {
                                     Ok(val) => Some(val),
                                     Err(_) => None
                                 }
@@ -169,6 +187,7 @@ impl Scraper {
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "test-local-data"))]
 mod test {
     use super::*;
 
@@ -194,5 +213,49 @@ mod test {
         let matches = scraper.matches_brief(Live).unwrap();
 
         println!("{:#?}", matches);
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "test-local-data")]
+mod test_local_data {
+    use super::*;
+    use test_utils::*;
+
+    const COMPLETED_MATCHES_BRIEF_PATH: &'static str = "test_data/completed_matches_brief.json";
+    const FUTURE_MATCHES_BRIEF_PATH: &'static str = "test_data/future_matches_brief.json";
+    const LIVE_MATCHES_BRIEF_PATH: &'static str = "test_data/live_matches_brief.json";
+
+    #[test]
+    fn completed_matches_brief() {
+        let scraper = Scraper::new().unwrap();
+        let matches = scraper.matches_brief(Completed).unwrap();
+
+        let data = write_matches(COMPLETED_MATCHES_BRIEF_PATH, matches).unwrap();
+        let loaded_data = SaveData::load(COMPLETED_MATCHES_BRIEF_PATH).unwrap();
+
+        assert_eq!(&data, &loaded_data);
+    }
+
+    #[test]
+    fn future_matches_brief() {
+        let scraper = Scraper::new().unwrap();
+        let matches = scraper.matches_brief(InFuture).unwrap();
+
+        let data = write_matches(FUTURE_MATCHES_BRIEF_PATH, matches).unwrap();
+        let loaded_data = SaveData::load(FUTURE_MATCHES_BRIEF_PATH).unwrap();
+
+        assert_eq!(&data, &loaded_data);
+    }
+
+    #[test]
+    fn live_matches_brief() {
+        let scraper = Scraper::new().unwrap();
+        let matches = scraper.matches_brief(Live).unwrap();
+
+        let data = write_matches(LIVE_MATCHES_BRIEF_PATH, matches).unwrap();
+        let loaded_data = SaveData::load(LIVE_MATCHES_BRIEF_PATH).unwrap();
+
+        assert_eq!(&data, &loaded_data);
     }
 }
