@@ -2,6 +2,7 @@
 extern crate error_chain;
 extern crate reqwest;
 extern crate scraper;
+extern crate chrono;
 
 mod error;
 mod data_structs;
@@ -9,6 +10,7 @@ mod data_structs;
 use error::*;
 use reqwest::{Client, IntoUrl};
 use scraper::{Html, Selector};
+use chrono::{Utc, TimeZone, LocalResult};
 use data_structs::CompletedMatchBrief;
 use std::io::Read;
 
@@ -18,6 +20,7 @@ pub struct Scraper {
 
 impl Scraper {
     /// Get a scraper with reqwest's default `Client` config.
+    #[inline]
     pub fn new() -> Result<Scraper> {
         Ok(Scraper {
             client: Client::new()?
@@ -27,6 +30,7 @@ impl Scraper {
     /// Get a scraper that will use the `Client` you provide.
     ///
     /// This means you can configure the client as you wish.
+    #[inline]
     pub fn with_client(client: Client) -> Scraper {
         Scraper {
             client
@@ -35,7 +39,24 @@ impl Scraper {
 
     /// Gets the main page (https://www.over.gg/) and extracts the completed
     /// match info available there for all listed matches.
+    #[inline]
     pub fn matches_brief(&self) -> Result<Vec<CompletedMatchBrief>> {
+        fn set_team_name(data: &mut CompletedMatchBrief, idx: usize, val: String) {
+            if idx == 0 {
+                data.team_zero.name = val;
+            } else {
+                data.team_one.name = val;
+            }
+        }
+
+        fn set_team_maps_won(data: &mut CompletedMatchBrief, idx: usize, val: u8) {
+            if idx == 0 {
+                data.team_zero.maps_won = val;
+            } else {
+                data.team_one.maps_won = val;
+            }
+        }
+
         let html = self.get_string("https://www.over.gg/")?;
         let doc = Html::parse_document(&html);
         let mut matches = vec![];
@@ -75,48 +96,39 @@ impl Scraper {
 
                     let mut teams = _match.select(&teams_sel);
 
-                    // TODO: Remove code duplication here
-                    if let Some(team) = teams.next() {
-                        // First team's name
-                        if let Some(elem) = team.select(&team_name_sel).next() {
-                            match_info.team_zero.name = elem.text().collect::<String>().trim().into();
-                        }
+                    for i in 0..2 {
+                        if let Some(team) = teams.next() {
+                            // Team name
+                            if let Some(elem) = team.select(&team_name_sel).next() {
+                                let name = elem.text().collect::<String>().trim().into();
+                                
+                                set_team_name(&mut match_info, i, name);
+                            }
 
-                        // First team's won maps count
-                        if let Some(elem) = team.select(&team_score_sel).next() {
-                            // TODO: Is just setting this to 0 when it fails to parse acceptable
-                            match_info.team_zero.maps_won = elem.text()
-                                                                .collect::<String>()
-                                                                .trim()
-                                                                .parse()
-                                                                .unwrap_or(0);
-                        }
-                    }
+                            // Team won maps count
+                            if let Some(elem) = team.select(&team_score_sel).next() {
+                                // TODO: Is just setting this to 0 when it fails to parse acceptable
+                                let count = elem.text()
+                                                .collect::<String>()
+                                                .trim()
+                                                .parse()
+                                                .unwrap_or(0);
 
-                    if let Some(team) = teams.next() {
-                        // Second team's name
-                        if let Some(elem) = team.select(&team_name_sel).next() {
-                            match_info.team_one.name = elem.text().collect::<String>().trim().into();
-                        }
-
-                        // Second team's won maps count
-                        if let Some(elem) = team.select(&team_score_sel).next() {
-                            // TODO: Is just setting this to 0 when it fails to parse acceptable
-                            match_info.team_one.maps_won = elem.text()
-                                                               .collect::<String>()
-                                                               .trim()
-                                                               .parse()
-                                                               .unwrap_or(0);
+                                set_team_maps_won(&mut match_info, i, count);
+                            }
                         }
                     }
 
-                    // // Scheduled match time
-                    // if let Some(elem) = _match.select(&match_scheduled_time_sel).next() {
-                    //     if let Some(val) = elem.attr("data-utc-ts") {
-                    //         // TODO: Is just setting this to 0 when it fails to parse acceptable
-                    //         match_info.scheduled_time = val.parse().unwrap_or(0);
-                    //     } 
-                    // }
+                    // Scheduled match time
+                    if let Some(elem) = _match.select(&match_scheduled_time_sel).next() {
+                        if let Some(val) = elem.value().attr("data-utc-ts") {
+                            if let Ok(timestamp) = val.trim().parse() {
+                                if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
+                                    match_info.scheduled_time = Some(datetime);
+                                }
+                            }
+                        }
+                    }
 
                     matches.push(match_info);
                 }
@@ -129,6 +141,7 @@ impl Scraper {
     /// Helper to get the HTML of the given URL.
     ///
     /// Panics if the given `url` cannot be parsed.
+    #[inline]
     fn get_string<U: IntoUrl>(&self, url: U) -> Result<String> {
         let mut resp = self.client.get(url).unwrap().send()?;
         let status = resp.status();

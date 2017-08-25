@@ -7,3 +7,4 @@ authors = ["Cldfire"]
 reqwest = "0.7"
 error-chain = "0.10"
 scraper = "0.4"
+chrono = "0.4"

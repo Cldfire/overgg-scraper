@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use chrono::{DateTime, Utc};
+
 pub enum MatchType {
     Bo3,
     Bo5
@@ -10,7 +12,7 @@ pub struct CompletedMatchBrief {
     pub event: EventInfo,
     pub team_zero: TeamCompletedMatchBriefInfo,
     pub team_one: TeamCompletedMatchBriefInfo,
-    pub scheduled_time: u32 // TODO: Type this better
+    pub scheduled_time: Option<DateTime<Utc>>
 }
 
 #[derive(Default, Debug)]
@@ -22,7 +24,7 @@ pub struct TeamCompletedMatchBriefInfo {
 pub struct CompletedMatch {
     pub match_type: MatchType,
     pub event: EventInfo,
-    pub scheduled_time: u32, // TODO: Type this better
+    pub scheduled_time: Option<DateTime<Utc>>,
     // TODO: Streams
     pub team_zero: TeamCompletedMatchInfo,
     pub team_one: TeamCompletedMatchInfo
