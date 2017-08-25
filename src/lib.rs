@@ -11,7 +11,7 @@ use error::*;
 use reqwest::{Client, IntoUrl};
 use scraper::{Html, Selector};
 use chrono::{Utc, TimeZone, LocalResult};
-use data_structs::{EventInfo, MatchBrief, MatchBriefType, TeamCompletedMatchBriefInfo};
+use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType};
 use data_structs::MatchBriefType::*;
 use std::io::Read;
 
@@ -44,13 +44,14 @@ impl Scraper {
     pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
         let html = self.get_string("https://www.over.gg/")?;
         let doc = Html::parse_document(&html);
-        let mut matches = vec![];
+        let mut matches_info = vec![];
 
         // TODO: Get this out of the code and into a config file
-        let completed_matches_sel = 
+        let matches_sel = 
             Selector::parse("div.wf-module.wf-card.mod-home-matches").unwrap();
         let header_sel = Selector::parse("div.wf-module-header").unwrap();
         let match_sel = Selector::parse("a.wf-module-item.mod-match").unwrap();
+        let live_sel = Selector::parse("div.h-match-eta.mod-live").unwrap();
         let event_name_sel = Selector::parse("div.h-match-preview-event").unwrap();
         let event_series_sel = Selector::parse("div.h-match-preview-series").unwrap();
         let teams_sel = Selector::parse("div.h-match-team").unwrap();
@@ -59,31 +60,48 @@ impl Scraper {
         let match_scheduled_time_sel = Selector::parse("div.h-match-preview-time").unwrap();
         let timestamp_attr_name = "data-utc-ts";
 
-        // First we get the list of completed matches
-        for list in doc.select(&completed_matches_sel) {
+        // First we get the lists of upcoming / completed matches
+        for list in doc.select(&matches_sel) {
             let header_text = match list.select(&header_sel).next() {
                 Some(elem) => elem.text().collect::<String>(),
                 None => bail!(ErrorKind::ExtractionError(html))
             };
             
+            // Now we narrow down to the list that contains the match type we want
             if header_text.trim() == String::from(_type) {
-                // Now we get information for each match
-                for _match in list.select(&match_sel) {
-                    let mut event = EventInfo::default();
-                    let mut teams_info = [
-                        TeamCompletedMatchBriefInfo::default(),
-                        TeamCompletedMatchBriefInfo::default()
-                    ];
-                    let mut scheduled_time = None;
+                // Now we get the match type we want
+                let matches: Vec<scraper::ElementRef> = 
+                    list.select(&match_sel).filter(|e| {
+                        // If we want live matches, we need to do some filtering
+                        if _type == Live {
+                            match e.select(&live_sel).next() {
+                                Some(_) => true,
+                                None => false
+                            }
+                        // If we want future matches, we need to do filtering too
+                        } else if _type == InFuture {
+                            match e.select(&live_sel).next() {
+                                Some(_) => false,
+                                None => true
+                            }
+                        // No filtering is required for completed matches
+                        } else {
+                            true
+                        }
+                    }).collect();
+
+                // Finally we get information for each match
+                for _match in matches {
+                    let mut match_info = MatchBriefInfo::default();
 
                     // Event name
                     if let Some(elem) = _match.select(&event_name_sel).next() {
-                        event.name = elem.text().collect::<String>().trim().into();
+                        match_info.event.name = elem.text().collect::<String>().trim().into();
                     }
 
                     // Event series
                     if let Some(elem) = _match.select(&event_series_sel).next() {
-                        event.series = elem.text().collect::<String>().trim().into();
+                        match_info.event.series = elem.text().collect::<String>().trim().into();
                     }
 
                     let mut teams = _match.select(&teams_sel);
@@ -92,18 +110,17 @@ impl Scraper {
                         if let Some(team) = teams.next() {
                             // Team name
                             if let Some(elem) = team.select(&team_name_sel).next() {
-                                teams_info[i].name = elem.text().collect::<String>().trim().into();
+                                match_info.teams[i].name = elem.text().collect::<String>().trim().into();
                             }
 
                             // Team won maps count
-                            if _type == Completed {
-                                if let Some(elem) = team.select(&team_score_sel).next() {
-                                    // TODO: Is just setting this to 0 when it fails to parse acceptable
-                                    teams_info[i].maps_won = elem.text()
-                                                                .collect::<String>()
-                                                                .trim()
-                                                                .parse()
-                                                                .unwrap_or(0);
+                            if let Some(elem) = team.select(&team_score_sel).next() {
+                                match_info.teams[i].maps_won = match elem.text()
+                                                                            .collect::<String>()
+                                                                            .trim()
+                                                                            .parse() {
+                                    Ok(val) => Some(val),
+                                    Err(_) => None
                                 }
                             }
                         }
@@ -114,42 +131,22 @@ impl Scraper {
                         if let Some(val) = elem.value().attr(timestamp_attr_name) {
                             if let Ok(timestamp) = val.trim().parse() {
                                 if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
-                                    scheduled_time = Some(datetime);
+                                    match_info.scheduled_time = Some(datetime);
                                 }
                             }
                         }
                     }
 
-                    matches.push(match _type {
-                        InFuture => {
-                            MatchBrief::InFuture {
-                                event,
-                                team_names: [
-                                    // TODO: Why do I have to clone here
-                                    teams_info[0].name.clone(),
-                                    teams_info[1].name.clone()
-                                ],
-                                scheduled_time
-                            }
-                        },
-
-                        Live => {
-                            MatchBrief::Live{} // TODO: Live
-                        },
-
-                        Completed => {
-                            MatchBrief::Completed {
-                                event,
-                                teams: teams_info,
-                                scheduled_time
-                            }
-                        },
+                    matches_info.push(match _type {
+                        InFuture => MatchBrief::InFuture(match_info),
+                        Live => MatchBrief::Live(match_info),
+                        Completed => MatchBrief::Completed(match_info)
                     });
                 }
             }
         }
 
-        Ok(matches)
+        Ok(matches_info)
     }
 
     /// Helper to get the HTML of the given URL.
@@ -187,6 +184,14 @@ mod test {
     fn future_matches_brief() {
         let scraper = Scraper::new().unwrap();
         let matches = scraper.matches_brief(InFuture).unwrap();
+
+        println!("{:#?}", matches);
+    }
+
+    #[test]
+    fn live_matches_brief() {
+        let scraper = Scraper::new().unwrap();
+        let matches = scraper.matches_brief(Live).unwrap();
 
         println!("{:#?}", matches);
     }

@@ -36,22 +36,13 @@ pub enum Team {
 #[derive(Debug)]
 pub enum MatchBrief {
     /// A match that has not been played yet.
-    InFuture {
-        event: EventInfo,
-        team_names: [String; 2],
-        scheduled_time: Option<DateTime<Utc>>
-    },
+    InFuture(MatchBriefInfo),
 
-    Live {
-        // TODO: Live matches
-    },
+    /// A match that is in progress.
+    Live(MatchBriefInfo),
 
     /// A match that has been played.
-    Completed {
-        event: EventInfo,
-        teams: [TeamCompletedMatchBriefInfo; 2],
-        scheduled_time: Option<DateTime<Utc>>
-    }
+    Completed(MatchBriefInfo)
 }
 
 impl MatchBrief {
@@ -60,19 +51,12 @@ impl MatchBrief {
         use self::Team::*;
 
         match self {
-            &mut InFuture { ref event, ref mut team_names, ref scheduled_time } => {
+            &mut InFuture(ref mut info) |
+            &mut Live(ref mut info) |
+            &mut Completed(ref mut info) => {
                 match team {
-                    Zero => team_names[0] = val,
-                    One => team_names[1] = val
-                }
-            }
-
-            &mut Live {} => {} // TODO: Live
-
-            &mut Completed { ref event, ref mut teams, ref scheduled_time } => {
-                match team {
-                    Zero => teams[0].name = val,
-                    One => teams[1].name = val
+                    Zero => info.teams[0].name = val,
+                    One => info.teams[1].name = val
                 }
             }
         }
@@ -83,24 +67,29 @@ impl MatchBrief {
         use self::Team::*;
 
         match self {
-            &mut InFuture { ref event, ref team_names, ref scheduled_time } => {}
-
-            &mut Live {} => {} // TODO: Live
-
-            &mut Completed { ref event, ref mut teams, ref scheduled_time } => {
+            &mut InFuture(ref mut info) |
+            &mut Live(ref mut info) |
+            &mut Completed(ref mut info) => {
                 match team {
-                    Zero => teams[0].maps_won = val,
-                    One => teams[1].maps_won = val
+                    Zero => info.teams[0].maps_won = Some(val),
+                    One => info.teams[1].maps_won = Some(val)
                 }
             }
         }
     }
 }
 
+#[derive(Debug, Default)]
+pub struct MatchBriefInfo {
+    pub event: EventInfo,
+    pub teams: [TeamCompletedMatchBriefInfo; 2],
+    pub scheduled_time: Option<DateTime<Utc>>
+}
+
 #[derive(Default, Debug)]
 pub struct TeamCompletedMatchBriefInfo {
     pub name: String,
-    pub maps_won: u8
+    pub maps_won: Option<u8>
 }
 
 pub struct CompletedMatch {
