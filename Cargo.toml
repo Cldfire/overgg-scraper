@@ -4,14 +4,16 @@ version = "0.1.0"
 authors = ["Cldfire"]
 
 [dependencies]
-reqwest = "0.7"
 error-chain = "0.10"
 scraper = "0.4"
 chrono = "0.4"
+reqwest = { version = "0.7", optional = true }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 
 [features]
-default = []
+default = ["http-client"]
+# Toggle for the `http_client` module
+http-client = ["reqwest"]
 derive-serde = ["serde", "chrono/serde"]
 test-local-data = ["derive-serde", "serde_json"]

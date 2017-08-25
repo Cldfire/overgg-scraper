@@ -1,6 +1,11 @@
 #![allow(unused)]
 
 use chrono::{DateTime, Utc};
+use self::MatchBrief::*;
+use self::MatchBriefType::InFuture as InFutureType;
+use self::MatchBriefType::Live as LiveType;
+use self::MatchBriefType::Completed as CompletedType;
+use self::Team::*;
 
 pub enum MatchType {
     Bo3,
@@ -18,11 +23,9 @@ pub enum MatchBriefType {
 
 impl From<MatchBriefType> for String {
     fn from(_type: MatchBriefType) -> String {
-        use MatchBriefType::*;
-
         match _type {
-            Completed => "completed matches".into(),
-            InFuture | Live => "upcoming matches".into()
+            CompletedType => "completed matches".into(),
+            InFutureType | LiveType => "upcoming matches".into()
         }
     }
 }
@@ -52,8 +55,6 @@ impl MatchBrief {
     /// Getter for the `event` field.
     #[inline]
     pub fn event(&self) -> &EventInfo {
-        use MatchBrief::*;
-
         match self {
             &InFuture(ref info) |
             &Live(ref info) |
@@ -66,8 +67,6 @@ impl MatchBrief {
     /// Getter for the `teams` field.
     #[inline]
     pub fn teams(&self) -> &[TeamCompletedMatchBriefInfo; 2] {
-        use MatchBrief::*;
-
         match self {
             &InFuture(ref info) |
             &Live(ref info) |
@@ -82,8 +81,6 @@ impl MatchBrief {
     /// Will be `None` if neither team won (match could be a draw or just not finished).
     #[inline]
     pub fn winner(&self) -> Option<&TeamCompletedMatchBriefInfo> {
-        use MatchBrief::*;
-
         match self {
             &Completed(ref info) => {
                 info.winner()
@@ -98,8 +95,6 @@ impl MatchBrief {
     /// Will be `None` if neither team lost (match could be a draw or just not finished).
     #[inline]
     pub fn loser(&self) -> Option<&TeamCompletedMatchBriefInfo> {
-        use MatchBrief::*;
-
         match self {
             &Completed(ref info) => {
                 info.loser()
@@ -110,9 +105,6 @@ impl MatchBrief {
     }
 
     pub(crate) fn set_team_name(&mut self, team: Team, val: String) {
-        use MatchBrief::*;
-        use self::Team::*;
-
         match self {
             &mut InFuture(ref mut info) |
             &mut Live(ref mut info) |
@@ -126,9 +118,6 @@ impl MatchBrief {
     }
 
     pub(crate) fn set_team_maps_won(&mut self, team: Team, val: u8) {
-        use MatchBrief::*;
-        use self::Team::*;
-
         match self {
             &mut InFuture(ref mut info) |
             &mut Live(ref mut info) |

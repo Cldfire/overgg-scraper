@@ -16,11 +16,9 @@ error_chain! {
                      code)
         }
 
-        ExtractionError(html: String) {
+        ExtractionError {
             description("Something went wrong while attempting to extract \
                          information from HTML.")
-            display("Something went wrong while attempting to extract information \
-                     from the following HTML: {}", html)
         }
     }
 }
