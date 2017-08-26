@@ -14,7 +14,7 @@ pub enum MatchType {
 
 /// Used to specify whether completed or future matches should be extracted.
 #[derive(Debug, PartialEq, Copy, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub enum MatchBriefType {
     InFuture,
     Live,
@@ -32,14 +32,14 @@ impl From<MatchBriefType> for String {
 
 /// Used to statically type the two teams in a match.
 #[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub enum Team {
     Zero,
     One
 }
 
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub enum MatchBrief {
     /// A match that has not been played yet.
     InFuture(MatchBriefInfo),
@@ -132,7 +132,7 @@ impl MatchBrief {
 }
 
 #[derive(Debug, Default, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct MatchBriefInfo {
     pub event: EventInfo,
     pub teams: [TeamCompletedMatchBriefInfo; 2],
@@ -170,14 +170,14 @@ impl MatchBriefInfo {
 }
 
 #[derive(Default, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct TeamCompletedMatchBriefInfo {
     pub name: String,
     pub maps_won: Option<u8>
 }
 
 #[derive(Default, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct EventInfo {
     pub name: String,
     pub series: String

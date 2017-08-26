@@ -1,10 +1,14 @@
 //! Handles extraction of content from the main page (https://www.over.gg/).
 
 use error::*;
-use scraper::{Html, Selector};
+use super::sel;
+use scraper::Html;
 use chrono::{Utc, TimeZone, LocalResult};
 use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType};
 use data_structs::MatchBriefType::*;
+use std::collections::HashMap;
+
+const MATCHES_BRIEF_SELECTORS_STR: &'static str = include_str!("../../selectors/matches_brief.toml");
 
 /// Handles extraction of content from the main page (https://www.over.gg/).
 ///
@@ -29,23 +33,12 @@ impl MainPageScraper {
     pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
         let mut matches_info = vec![];
 
-        // TODO: Get this out of the code and into a config file
-        let matches_sel = 
-            Selector::parse("div.wf-module.wf-card.mod-home-matches").unwrap();
-        let header_sel = Selector::parse("div.wf-module-header").unwrap();
-        let match_sel = Selector::parse("a.wf-module-item.mod-match").unwrap();
-        let live_sel = Selector::parse("div.h-match-eta.mod-live").unwrap();
-        let event_name_sel = Selector::parse("div.h-match-preview-event").unwrap();
-        let event_series_sel = Selector::parse("div.h-match-preview-series").unwrap();
-        let teams_sel = Selector::parse("div.h-match-team").unwrap();
-        let team_name_sel = Selector::parse("div.h-match-team-name").unwrap();
-        let team_score_sel = Selector::parse("div.h-match-team-score.mod-count").unwrap();
-        let match_scheduled_time_sel = Selector::parse("div.h-match-preview-time").unwrap();
-        let timestamp_attr_name = "data-utc-ts";
+        let selectors: HashMap<String, String> =
+            ::toml::from_str(MATCHES_BRIEF_SELECTORS_STR).unwrap();
 
         // First we get the lists of upcoming / completed matches
-        for list in self.doc.select(&matches_sel) {
-            let header_text = match list.select(&header_sel).next() {
+        for list in self.doc.select(&(sel(&selectors["matches"]))) {
+            let header_text = match list.select(&(sel(&selectors["header"]))).next() {
                 Some(elem) => elem.text().collect::<String>(),
                 None => bail!(ErrorKind::ExtractionError)
             };
@@ -54,16 +47,16 @@ impl MainPageScraper {
             if header_text.trim() == String::from(_type) {
                 // Now we get the match type we want
                 let matches: Vec<::scraper::ElementRef> = 
-                    list.select(&match_sel).filter(|e| {
+                    list.select(&(sel(&selectors["match"]))).filter(|e| {
                         // If we want live matches, we need to do some filtering
                         if _type == Live {
-                            match e.select(&live_sel).next() {
+                            match e.select(&(sel(&selectors["live"]))).next() {
                                 Some(_) => true,
                                 None => false
                             }
                         // If we want future matches, we need to do filtering too
                         } else if _type == InFuture {
-                            match e.select(&live_sel).next() {
+                            match e.select(&(sel(&selectors["live"]))).next() {
                                 Some(_) => false,
                                 None => true
                             }
@@ -78,26 +71,27 @@ impl MainPageScraper {
                     let mut match_info = MatchBriefInfo::default();
 
                     // Event name
-                    if let Some(elem) = _match.select(&event_name_sel).next() {
+                    if let Some(elem) = _match.select(&(sel(&selectors["event_name"]))).next() {
                         match_info.event.name = elem.text().collect::<String>().trim().into();
                     }
 
                     // Event series
-                    if let Some(elem) = _match.select(&event_series_sel).next() {
+                    if let Some(elem) = _match.select(&(sel(&selectors["event_series"]))).next() {
                         match_info.event.series = elem.text().collect::<String>().trim().into();
                     }
 
-                    let mut teams = _match.select(&teams_sel);
+                    let teams_sel = &(sel(&selectors["teams"]));
+                    let mut teams = _match.select(teams_sel);
 
                     for i in 0..2 {
                         if let Some(team) = teams.next() {
                             // Team name
-                            if let Some(elem) = team.select(&team_name_sel).next() {
+                            if let Some(elem) = team.select(&(sel(&selectors["team_name"]))).next() {
                                 match_info.teams[i].name = elem.text().collect::<String>().trim().into();
                             }
 
                             // Team won maps count
-                            if let Some(elem) = team.select(&team_score_sel).next() {
+                            if let Some(elem) = team.select(&(sel(&selectors["team_score"]))).next() {
                                 match_info.teams[i].maps_won = match elem.text()
                                                                          .collect::<String>()
                                                                          .trim()
@@ -110,8 +104,8 @@ impl MainPageScraper {
                     }
 
                     // Scheduled match time
-                    if let Some(elem) = _match.select(&match_scheduled_time_sel).next() {
-                        if let Some(val) = elem.value().attr(timestamp_attr_name) {
+                    if let Some(elem) = _match.select(&(sel(&selectors["match_scheduled_time"]))).next() {
+                        if let Some(val) = elem.value().attr(&selectors["timestamp_attr"]) {
                             if let Ok(timestamp) = val.trim().parse() {
                                 if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
                                     match_info.scheduled_time = Some(datetime);

@@ -54,12 +54,11 @@ extern crate error_chain;
 extern crate reqwest;
 extern crate scraper;
 extern crate chrono;
-#[cfg(feature = "serde")]
-#[macro_use]
+extern crate toml;
 extern crate serde;
-#[cfg(feature = "serde")]
-#[cfg(feature = "test-local-data")]
-#[cfg(test)]
+#[macro_use]
+extern crate serde_derive;
+#[cfg(all(feature = "test-local-data", test))]
 extern crate serde_json;
 
 pub mod error;

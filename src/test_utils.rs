@@ -8,7 +8,7 @@ use serde_json;
 use error::*;
 
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SaveData {
     pub match_data: Vec<MatchBrief>,
     pub winners: Vec<Option<String>>
