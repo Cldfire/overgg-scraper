@@ -176,10 +176,11 @@ mod test {
             assert!(_match.teams()[0].maps_won.is_none());
             assert!(_match.teams()[1].maps_won.is_none());
 
-            // Make sure we got distinct team names
+            // Make sure we got non-empty team names
+            // Distinctness is not always possible for upcoming matches as the
+            // teams could be listed as TBD
             assert!(_match.teams()[0].name != "");
             assert!(_match.teams()[1].name != "");
-            assert!(_match.teams()[0].name != _match.teams()[1].name);
 
             // Make sure that the methods to determine winner / loser work correctly
             assert!(_match.winner().is_none());
