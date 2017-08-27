@@ -155,8 +155,10 @@ mod test {
             assert!(_match.teams()[0].name != _match.teams()[1].name);
 
             // Make sure that the methods to determine winner / loser work correctly
-            assert!(_match.winner().unwrap() != _match.loser().unwrap());
-            assert!(_match.winner().unwrap().maps_won > _match.loser().unwrap().maps_won);
+            if let (Some(winner), Some(loser)) = (_match.winner(), _match.loser()) {
+                assert!(winner != loser);
+                assert!(winner.maps_won > loser.maps_won);
+            }
         }
     }
 
@@ -208,10 +210,6 @@ mod test {
             assert!(_match.teams()[0].name != "");
             assert!(_match.teams()[1].name != "");
             assert!(_match.teams()[0].name != _match.teams()[1].name);
-
-            // Make sure that the methods to determine winner / loser work correctly
-            assert!(_match.winner().is_none());
-            assert!(_match.loser().is_none());
         }
     }
 }
