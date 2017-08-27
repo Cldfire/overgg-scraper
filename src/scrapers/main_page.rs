@@ -1,12 +1,11 @@
 //! Handles extraction of content from the main page (https://www.over.gg/).
 
 use error::*;
-use super::sel;
+use super::load_sels;
 use scraper::Html;
 use chrono::{Utc, TimeZone, LocalResult};
 use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType};
 use data_structs::MatchBriefType::*;
-use std::collections::HashMap;
 
 const MATCHES_BRIEF_SELECTORS_STR: &'static str = include_str!("../../selectors/matches_brief.toml");
 
@@ -33,12 +32,11 @@ impl MainPageScraper {
     pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
         let mut matches_info = vec![];
 
-        let selectors: HashMap<String, String> =
-            ::toml::from_str(MATCHES_BRIEF_SELECTORS_STR).unwrap();
+        let selectors = load_sels(MATCHES_BRIEF_SELECTORS_STR);
 
         // First we get the lists of upcoming / completed matches
-        for list in self.doc.select(&(sel(&selectors["matches"]))) {
-            let header_text = match list.select(&(sel(&selectors["header"]))).next() {
+        for list in self.doc.select(&selectors["matches"]) {
+            let header_text = match list.select(&selectors["header"]).next() {
                 Some(elem) => elem.text().collect::<String>(),
                 None => bail!(ErrorKind::ExtractionError)
             };
@@ -47,22 +45,24 @@ impl MainPageScraper {
             if header_text.trim() == String::from(_type) {
                 // Now we get the match type we want
                 let matches: Vec<::scraper::ElementRef> = 
-                    list.select(&(sel(&selectors["match"]))).filter(|e| {
+                    list.select(&selectors["match"]).filter(|e| {
                         // If we want live matches, we need to do some filtering
                         if _type == Live {
-                            match e.select(&(sel(&selectors["live"]))).next() {
+                            match e.select(&selectors["live"]).next() {
                                 Some(_) => true,
                                 None => false
                             }
                         // If we want future matches, we need to do filtering too
                         } else if _type == InFuture {
-                            match e.select(&(sel(&selectors["live"]))).next() {
+                            match e.select(&selectors["live"]).next() {
                                 Some(_) => false,
                                 None => true
                             }
                         // No filtering is required for completed matches
-                        } else {
+                        } else if _type == Completed {
                             true
+                        } else {
+                            unimplemented!();
                         }
                     }).collect();
 
@@ -71,27 +71,27 @@ impl MainPageScraper {
                     let mut match_info = MatchBriefInfo::default();
 
                     // Event name
-                    if let Some(elem) = _match.select(&(sel(&selectors["event_name"]))).next() {
+                    if let Some(elem) = _match.select(&selectors["event_name"]).next() {
                         match_info.event.name = elem.text().collect::<String>().trim().into();
                     }
 
                     // Event series
-                    if let Some(elem) = _match.select(&(sel(&selectors["event_series"]))).next() {
+                    if let Some(elem) = _match.select(&selectors["event_series"]).next() {
                         match_info.event.series = elem.text().collect::<String>().trim().into();
                     }
 
-                    let teams_sel = &(sel(&selectors["teams"]));
+                    let teams_sel = &selectors["teams"];
                     let mut teams = _match.select(teams_sel);
 
                     for i in 0..2 {
                         if let Some(team) = teams.next() {
                             // Team name
-                            if let Some(elem) = team.select(&(sel(&selectors["team_name"]))).next() {
+                            if let Some(elem) = team.select(&selectors["team_name"]).next() {
                                 match_info.teams[i].name = elem.text().collect::<String>().trim().into();
                             }
 
                             // Team won maps count
-                            if let Some(elem) = team.select(&(sel(&selectors["team_score"]))).next() {
+                            if let Some(elem) = team.select(&selectors["team_score"]).next() {
                                 match_info.teams[i].maps_won = match elem.text()
                                                                          .collect::<String>()
                                                                          .trim()
@@ -104,8 +104,8 @@ impl MainPageScraper {
                     }
 
                     // Scheduled match time
-                    if let Some(elem) = _match.select(&(sel(&selectors["match_scheduled_time"]))).next() {
-                        if let Some(val) = elem.value().attr(&selectors["timestamp_attr"]) {
+                    if let Some(elem) = _match.select(&selectors["match_scheduled_time"]).next() {
+                        if let Some(val) = elem.value().attr("data-utc-ts") {
                             if let Ok(timestamp) = val.trim().parse() {
                                 if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
                                     match_info.scheduled_time = Some(datetime);
