@@ -183,6 +183,16 @@ pub struct EventInfo {
     pub series: String
 }
 
+#[derive(Default, Debug, PartialEq)]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
+pub struct LivestreamInfo {
+    pub name: String,
+    pub title: Option<String>,
+    pub viewer_count: Option<u32>,
+    // TODO: Maybe this should be a `reqwest::Url` when `http_client` is on
+    pub url: String
+}
+
 // TODO: Finish the beneath draft
 
 pub struct CompletedMatch {

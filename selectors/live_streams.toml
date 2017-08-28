@@ -1,0 +1,5 @@
+cards = "div.wf-card"
+header = "a.wf-module-header"
+stream = "a.wf-module-item.module-item"
+stream_name = "span.module-item-title-sub.mod-ow-feat"
+stream_viewer_count = "span.stream-item-count"

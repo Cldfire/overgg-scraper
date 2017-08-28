@@ -4,10 +4,11 @@ use error::*;
 use super::load_sels;
 use scraper::Html;
 use chrono::{Utc, TimeZone, LocalResult};
-use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType};
+use data_structs::{MatchBrief, MatchBriefInfo, MatchBriefType, LivestreamInfo};
 use data_structs::MatchBriefType::*;
 
 const MATCHES_BRIEF_SELECTORS_STR: &'static str = include_str!("../../selectors/matches_brief.toml");
+const LIVE_STREAMS_SELECTORS_STR: &'static str = include_str!("../../selectors/live_streams.toml");
 
 /// Handles extraction of content from the main page (https://www.over.gg/).
 ///
@@ -31,13 +32,13 @@ impl MainPageScraper {
     #[inline]
     pub fn matches_brief(&self, _type: MatchBriefType) -> Result<Vec<MatchBrief>> {
         let mut matches_info = vec![];
-
         let selectors = load_sels(MATCHES_BRIEF_SELECTORS_STR);
 
         // First we get the lists of upcoming / completed matches
         for list in self.doc.select(&selectors["matches"]) {
             let header_text = match list.select(&selectors["header"]).next() {
                 Some(elem) => elem.text().collect::<String>(),
+                // TODO: Don't bail if no header
                 None => bail!(ErrorKind::ExtractionError)
             };
             
@@ -105,6 +106,7 @@ impl MainPageScraper {
 
                     // Scheduled match time
                     if let Some(elem) = _match.select(&selectors["match_scheduled_time"]).next() {
+                        // TODO: Get attr keys in file
                         if let Some(val) = elem.value().attr("data-utc-ts") {
                             if let Ok(timestamp) = val.trim().parse() {
                                 if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0) {
@@ -120,10 +122,67 @@ impl MainPageScraper {
                         Completed => MatchBrief::Completed(match_info)
                     });
                 }
+
+                break;
             }
         }
 
         Ok(matches_info)
+    }
+
+    /// Gets the livestream information available on the main page.
+    ///
+    /// This differs from simply grabbing OW livestreams from Twitch in that it
+    /// is a curated list consisting of pro players and tournament / event streams.
+    #[inline]
+    pub fn live_streams(&self) -> Result<Vec<LivestreamInfo>> {
+        let mut live_streams = vec![];
+        let selectors = load_sels(LIVE_STREAMS_SELECTORS_STR);
+
+        // First we have to find the card that contains the livestream information
+        for card in self.doc.select(&selectors["cards"]) {
+
+            if let Some(elem) = card.select(&selectors["header"]).next() {
+                if elem.text().collect::<String>().trim() == "Live Streams" {
+                    // Now we extract the info for each stream
+                    for stream in card.select(&selectors["stream"]) {
+                        let mut stream_info = LivestreamInfo::default();
+
+                        // Stream name
+                        if let Some(elem) = stream.select(&selectors["stream_name"]).next() {
+                            stream_info.name = elem.text().collect::<String>().trim().into();
+                        }
+
+                        // Stream title
+                        if let Some(val) = stream.value().attr("title") {
+                            stream_info.title = Some(val.trim().into());
+                        }
+
+                        // Stream viewer count
+                        if let Some(elem) = stream.select(&selectors["stream_viewer_count"]).next() {
+                            stream_info.viewer_count = match elem.text()
+                                                                .collect::<String>()
+                                                                .trim()
+                                                                .parse() {
+                                Ok(val) => Some(val),
+                                Err(_) => None
+                            }
+                        }
+
+                        // Stream URL
+                        if let Some(val) = stream.value().attr("href") {
+                            stream_info.url = val.trim().into();
+                        }
+
+                        live_streams.push(stream_info);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        Ok(live_streams)
     }
 }
 
@@ -212,6 +271,18 @@ mod test {
             assert!(_match.teams()[0].name != _match.teams()[1].name);
         }
     }
+
+    #[test]
+    fn live_streams() {
+        let dl = Downloader::new().unwrap();
+        let scraper = dl.main_page().unwrap();
+        let streams = scraper.live_streams().unwrap();
+
+        for stream in streams {
+            // Make sure we got a name
+            assert!(stream.name != "");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -257,4 +328,6 @@ mod test_local_data {
 
         assert_eq!(&data, &loaded_data);
     }
+
+    // TODO: live_streams()
 }

@@ -30,5 +30,7 @@ fn actual_main() -> Result<()> {
         None => {}
     }
 
+    // TODO: Slimmer formatting, all supported main page extraction
+
     Ok(())
 }
