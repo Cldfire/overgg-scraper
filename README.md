@@ -6,9 +6,9 @@ A small Rust library to scrape useful data from [over.gg](https://www.over.gg/),
 let dlr = Downloader::new()?;
 let scraper = dlr.main_page()?;
 
-let completed_matches = scraper.matches_brief(Completed)?;
-let upcoming_matches = scraper.matches_brief(InFuture)?;
-let live_matches = scraper.matches_brief(Live)?;
+let completed_matches = scraper.matches_brief(Completed);
+let upcoming_matches = scraper.matches_brief(InFuture);
+let live_matches = scraper.matches_brief(Live);
 ```
 
 The site unfortunately does not provide any kind of API to access its extremely useful data, which is why this scraper has to exist.

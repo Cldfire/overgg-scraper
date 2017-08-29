@@ -52,6 +52,18 @@ pub enum MatchBrief {
 }
 
 impl MatchBrief {
+    /// Getter for the `scheduled_time` field.
+    #[inline]
+    pub fn scheduled_time(&self) -> &Option<DateTime<Utc>> {
+        match self {
+            &InFuture(ref info) |
+            &Live(ref info) |
+            &Completed(ref info) => {
+                &(info.scheduled_time)
+            }
+        }
+    }
+
     /// Getter for the `event` field.
     #[inline]
     pub fn event(&self) -> &EventInfo {

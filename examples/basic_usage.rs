@@ -18,19 +18,49 @@ fn actual_main() -> Result<()> {
     let dlr = Downloader::new()?;
     let scraper = dlr.main_page()?;
 
+    // Get the data...
     let completed_matches = scraper.matches_brief(Completed);
     let upcoming_matches = scraper.matches_brief(InFuture);
     let live_matches = scraper.matches_brief(Live);
+    let mut streams = scraper.live_streams();
 
-    println!("First completed match:\n {:#?}\n", completed_matches[0]);
-    println!("First upcoming match:\n {:#?}\n", upcoming_matches[0]);
-    
-    match live_matches.get(0) {
-        Some(_match) => println!("First live match:\n {:#?}", _match),
-        None => {}
+    // ...use the data.
+    println!();
+
+    {
+        let winner = completed_matches[0].winner().unwrap();
+        let loser = completed_matches[0].loser().unwrap();
+
+        println!("Completed match #1: {} beat {} by a score of {} - {}",
+            winner.name,
+            loser.name,
+            winner.maps_won.unwrap(),
+            loser.maps_won.unwrap());
     }
 
-    // TODO: Slimmer formatting, all supported main page extraction
+    println!("Upcoming match #1: {} plays {} at {}",
+        upcoming_matches[0].teams()[0].name,
+        upcoming_matches[0].teams()[1].name,
+        upcoming_matches[0].scheduled_time().unwrap());
+
+    if let Some(_match) = live_matches.get(0) {
+        println!("Live match #1: {} is playing {} and the score is currently {} - {}",
+            _match.teams()[0].name,
+            _match.teams()[1].name,
+            _match.teams()[0].maps_won.unwrap(),
+            _match.teams()[1].maps_won.unwrap());
+    }
+
+    if streams.curated.len() > 0 {
+        let stream = streams.curated.remove(0);
+
+        println!("Curated streamer #1: {} is streaming \"{}\" to {} viewers",
+            stream.name,
+            stream.title.unwrap(),
+            stream.viewer_count.unwrap());
+    }
+
+    println!();
 
     Ok(())
 }
