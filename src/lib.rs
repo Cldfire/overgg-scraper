@@ -48,8 +48,12 @@ programmatic retrieval of data from the [over.gg](https://www.over.gg/) site,
 nothing more, and I do not endorse excessive scraping.
 */
 
+#![recursion_limit = "1024"]
+
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate if_chain;
 #[cfg(feature = "http-client")]
 extern crate reqwest;
 extern crate scraper;

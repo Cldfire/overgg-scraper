@@ -1,6 +1,6 @@
 //! Various modules for getting data from the site's HTML.
 
-// TODO: Figure out what needs to be about backslashes in the output
+// TODO: Figure out what needs to be done about backslashes in the output
 
 pub mod main_page;
 

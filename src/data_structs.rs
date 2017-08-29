@@ -185,6 +185,13 @@ pub struct EventInfo {
 
 #[derive(Default, Debug, PartialEq)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
+pub struct Livestreams {
+    pub curated: Vec<LivestreamInfo>,
+    pub other_top: Vec<LivestreamInfo>
+}
+
+#[derive(Default, Debug, PartialEq)]
+#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct LivestreamInfo {
     pub name: String,
     pub title: Option<String>,

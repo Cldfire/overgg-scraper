@@ -18,9 +18,9 @@ fn actual_main() -> Result<()> {
     let dlr = Downloader::new()?;
     let scraper = dlr.main_page()?;
 
-    let completed_matches = scraper.matches_brief(Completed)?;
-    let upcoming_matches = scraper.matches_brief(InFuture)?;
-    let live_matches = scraper.matches_brief(Live)?;
+    let completed_matches = scraper.matches_brief(Completed);
+    let upcoming_matches = scraper.matches_brief(InFuture);
+    let live_matches = scraper.matches_brief(Live);
 
     println!("First completed match:\n {:#?}\n", completed_matches[0]);
     println!("First upcoming match:\n {:#?}\n", upcoming_matches[0]);

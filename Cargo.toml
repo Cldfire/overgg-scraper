@@ -5,6 +5,7 @@ authors = ["Cldfire"]
 
 [dependencies]
 error-chain = "0.10"
+if_chain = "0.1"
 scraper = "0.4"
 chrono = "0.4"
 toml = "0.4"

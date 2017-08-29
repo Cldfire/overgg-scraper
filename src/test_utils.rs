@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::{Read, Write};
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json;
 use error::*;
 
@@ -16,12 +17,7 @@ pub struct SaveData {
 
 impl SaveData {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path)?;
-        let mut buf_reader = BufReader::new(file);
-        let mut contents = String::new();
-        buf_reader.read_to_string(&mut contents)?;
-
-        Ok(serde_json::from_str(&contents)?)
+        load(path)
     }
 }
 
@@ -35,6 +31,18 @@ pub fn write_matches<P: AsRef<Path>>(path: P, matches: Vec<MatchBrief>) -> Resul
 
     write_non_overwrite(path, &data)?;
     Ok(data)
+}
+
+pub fn load<P, S>(path: P) -> Result<S> 
+    where P: AsRef<Path>,
+          S: DeserializeOwned {
+
+    let file = File::open(path)?;
+    let mut buf_reader = BufReader::new(file);
+    let mut contents = String::new();
+    buf_reader.read_to_string(&mut contents)?;
+
+    Ok(serde_json::from_str(&contents)?)
 }
 
 pub fn write_non_overwrite<P, S>(path: P, thing: &S) -> Result<()>
