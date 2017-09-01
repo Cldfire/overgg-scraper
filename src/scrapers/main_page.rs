@@ -1,11 +1,9 @@
 //! Handles extraction of content from the main page (https://www.over.gg/).
 
-use error::*;
 use super::load_sels;
 use scraper::Html;
 use chrono::{Utc, TimeZone, LocalResult};
 use data_structs::{
-    MatchBrief,
     MatchBriefInfo,
     MatchBriefType,
     Livestreams,
@@ -36,7 +34,7 @@ impl MainPageScraper {
     /// Gets information available on the main page for the matches of the given
     /// type.
     #[inline]
-    pub fn matches_brief(&self, _type: MatchBriefType) -> Vec<MatchBrief> {
+    pub fn matches_brief(&self, _type: MatchBriefType) -> Vec<MatchBriefInfo> {
         let mut matches_info = vec![];
         let selectors = load_sels(MATCHES_BRIEF_SELECTORS_STR);
 
@@ -112,11 +110,7 @@ impl MainPageScraper {
                         match_info.scheduled_time = Some(datetime);
                     }}
 
-                    matches_info.push(match _type {
-                        InFuture => MatchBrief::InFuture(match_info),
-                        Live => MatchBrief::Live(match_info),
-                        Completed => MatchBrief::Completed(match_info)
-                    });
+                    matches_info.push(match_info);
                 }
 
                 break;
@@ -206,18 +200,18 @@ mod test {
 
         for _match in matches {
             // Make sure we got distinct event info
-            assert!(_match.event().name != "");
-            assert!(_match.event().series != "");
-            assert!(_match.event().name != _match.event().series);
+            assert!(_match.event.name != "");
+            assert!(_match.event.series != "");
+            assert!(_match.event.name != _match.event.series);
 
             // Make sure we got a value for maps won
-            assert!(!_match.teams()[0].maps_won.is_none());
-            assert!(!_match.teams()[1].maps_won.is_none());
+            assert!(!_match.teams[0].maps_won.is_none());
+            assert!(!_match.teams[1].maps_won.is_none());
 
             // Make sure we got distinct team names
-            assert!(_match.teams()[0].name != "");
-            assert!(_match.teams()[1].name != "");
-            assert!(_match.teams()[0].name != _match.teams()[1].name);
+            assert!(_match.teams[0].name != "");
+            assert!(_match.teams[1].name != "");
+            assert!(_match.teams[0].name != _match.teams[1].name);
 
             // Make sure that the methods to determine winner / loser work correctly
             if let (Some(winner), Some(loser)) = (_match.winner(), _match.loser()) {
@@ -235,19 +229,19 @@ mod test {
 
         for _match in matches {
             // Make sure we got distinct event info
-            assert!(_match.event().name != "");
-            assert!(_match.event().series != "");
-            assert!(_match.event().name != _match.event().series);
+            assert!(_match.event.name != "");
+            assert!(_match.event.series != "");
+            assert!(_match.event.name != _match.event.series);
 
             // Make sure we didn't get a value for maps won
-            assert!(_match.teams()[0].maps_won.is_none());
-            assert!(_match.teams()[1].maps_won.is_none());
-
+            assert!(_match.teams[0].maps_won.is_none());
+            assert!(_match.teams[1].maps_won.is_none());
+            
             // Make sure we got non-empty team names
             // Distinctness is not always possible for upcoming matches as the
             // teams could be listed as TBD
-            assert!(_match.teams()[0].name != "");
-            assert!(_match.teams()[1].name != "");
+            assert!(_match.teams[0].name != "");
+            assert!(_match.teams[1].name != "");
 
             // Make sure that the methods to determine winner / loser work correctly
             assert!(_match.winner().is_none());
@@ -263,18 +257,18 @@ mod test {
 
         for _match in matches {
             // Make sure we got distinct event info
-            assert!(_match.event().name != "");
-            assert!(_match.event().series != "");
-            assert!(_match.event().name != _match.event().series);
+            assert!(_match.event.name != "");
+            assert!(_match.event.series != "");
+            assert!(_match.event.name != _match.event.series);
 
             // Make sure we got a value for maps won
-            assert!(!_match.teams()[0].maps_won.is_none());
-            assert!(!_match.teams()[1].maps_won.is_none());
+            assert!(!_match.teams[0].maps_won.is_none());
+            assert!(!_match.teams[1].maps_won.is_none());
 
             // Make sure we got distinct team names
-            assert!(_match.teams()[0].name != "");
-            assert!(_match.teams()[1].name != "");
-            assert!(_match.teams()[0].name != _match.teams()[1].name);
+            assert!(_match.teams[0].name != "");
+            assert!(_match.teams[1].name != "");
+            assert!(_match.teams[0].name != _match.teams[1].name);
         }
     }
 

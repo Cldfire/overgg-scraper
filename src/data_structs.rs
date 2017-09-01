@@ -1,7 +1,6 @@
 #![allow(unused)]
 
 use chrono::{DateTime, Utc};
-use self::MatchBrief::*;
 use self::MatchBriefType::InFuture as InFutureType;
 use self::MatchBriefType::Live as LiveType;
 use self::MatchBriefType::Completed as CompletedType;
@@ -36,111 +35,6 @@ impl From<MatchBriefType> for String {
 pub enum Team {
     Zero,
     One
-}
-
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
-pub enum MatchBrief {
-    /// A match that has not been played yet.
-    InFuture(MatchBriefInfo),
-
-    /// A match that is in progress.
-    Live(MatchBriefInfo),
-
-    /// A match that has been played.
-    Completed(MatchBriefInfo)
-}
-
-impl MatchBrief {
-    /// Getter for the `scheduled_time` field.
-    #[inline]
-    pub fn scheduled_time(&self) -> &Option<DateTime<Utc>> {
-        match self {
-            &InFuture(ref info) |
-            &Live(ref info) |
-            &Completed(ref info) => {
-                &(info.scheduled_time)
-            }
-        }
-    }
-
-    /// Getter for the `event` field.
-    #[inline]
-    pub fn event(&self) -> &EventInfo {
-        match self {
-            &InFuture(ref info) |
-            &Live(ref info) |
-            &Completed(ref info) => {
-                &(info.event)
-            }
-        }
-    }
-
-    /// Getter for the `teams` field.
-    #[inline]
-    pub fn teams(&self) -> &[TeamCompletedMatchBriefInfo; 2] {
-        match self {
-            &InFuture(ref info) |
-            &Live(ref info) |
-            &Completed(ref info) => {
-                &(info.teams)
-            }
-        }
-    }
-
-    /// Determines which team won the match.
-    ///
-    /// Will be `None` if neither team won (match could be a draw or just not finished).
-    #[inline]
-    pub fn winner(&self) -> Option<&TeamCompletedMatchBriefInfo> {
-        match self {
-            &Completed(ref info) => {
-                info.winner()
-            }
-            &InFuture(_) |
-            &Live(_) => None
-        }
-    }
-
-    /// Determines which team lost the match.
-    ///
-    /// Will be `None` if neither team lost (match could be a draw or just not finished).
-    #[inline]
-    pub fn loser(&self) -> Option<&TeamCompletedMatchBriefInfo> {
-        match self {
-            &Completed(ref info) => {
-                info.loser()
-            }
-            &InFuture(_) |
-            &Live(_) => None
-        }
-    }
-
-    pub(crate) fn set_team_name(&mut self, team: Team, val: String) {
-        match self {
-            &mut InFuture(ref mut info) |
-            &mut Live(ref mut info) |
-            &mut Completed(ref mut info) => {
-                match team {
-                    Zero => info.teams[0].name = val,
-                    One => info.teams[1].name = val
-                }
-            }
-        }
-    }
-
-    pub(crate) fn set_team_maps_won(&mut self, team: Team, val: u8) {
-        match self {
-            &mut InFuture(ref mut info) |
-            &mut Live(ref mut info) |
-            &mut Completed(ref mut info) => {
-                match team {
-                    Zero => info.teams[0].maps_won = Some(val),
-                    One => info.teams[1].maps_won = Some(val)
-                }
-            }
-        }
-    }
 }
 
 #[derive(Debug, Default, PartialEq)]

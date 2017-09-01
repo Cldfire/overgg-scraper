@@ -39,16 +39,16 @@ fn actual_main() -> Result<()> {
     }
 
     println!("Upcoming match #1: {} plays {} at {}",
-        upcoming_matches[0].teams()[0].name,
-        upcoming_matches[0].teams()[1].name,
-        upcoming_matches[0].scheduled_time().unwrap());
+        upcoming_matches[0].teams[0].name,
+        upcoming_matches[0].teams[1].name,
+        upcoming_matches[0].scheduled_time.unwrap());
 
     if let Some(_match) = live_matches.get(0) {
         println!("Live match #1: {} is playing {} and the score is currently {} - {}",
-            _match.teams()[0].name,
-            _match.teams()[1].name,
-            _match.teams()[0].maps_won.unwrap(),
-            _match.teams()[1].maps_won.unwrap());
+            _match.teams[0].name,
+            _match.teams[1].name,
+            _match.teams[0].maps_won.unwrap(),
+            _match.teams[1].maps_won.unwrap());
     }
 
     if streams.curated.len() > 0 {

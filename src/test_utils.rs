@@ -1,4 +1,4 @@
-use data_structs::MatchBrief;
+use data_structs::MatchBriefInfo;
 use std::path::Path;
 use std::fs::File;
 use std::io::BufReader;
@@ -11,7 +11,7 @@ use error::*;
 #[derive(Debug, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
-    pub match_data: Vec<MatchBrief>,
+    pub match_data: Vec<MatchBriefInfo>,
     pub winners: Vec<Option<String>>
 }
 
@@ -21,7 +21,7 @@ impl SaveData {
     }
 }
 
-pub fn write_matches<P: AsRef<Path>>(path: P, matches: Vec<MatchBrief>) -> Result<SaveData> {
+pub fn write_matches<P: AsRef<Path>>(path: P, matches: Vec<MatchBriefInfo>) -> Result<SaveData> {
     let winners = matches.iter().map(|t| t.winner().map(|w| w.name.clone())).collect();
 
     let data = SaveData {
