@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Cldfire"]
 
 [dependencies]
-error-chain = "0.10"
+error-chain = { version = "0.10", default-features = false }
 if_chain = "0.1"
 scraper = "0.4"
 chrono = "0.4"
