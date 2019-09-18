@@ -15,10 +15,10 @@ pub struct Downloader {
 impl Downloader {
     /// Create a HTTP client with reqwest's default `Client` config.
     #[inline]
-    pub fn new() -> Result<Self> {
-        Ok(Self {
-            client: Client::new()?
-        })
+    pub fn new() -> Self {
+        Self {
+            client: Client::new()
+        }
     }
 
     /// Provide your own client for use by this struct.
@@ -43,7 +43,7 @@ impl Downloader {
     /// Panics if the given `url` cannot be parsed.
     #[inline]
     fn get_string<U: IntoUrl>(&self, url: U) -> Result<String> {
-        let mut resp = self.client.get(url).unwrap().send()?;
+        let mut resp = self.client.get(url).send()?;
         let status = resp.status();
 
         if !status.is_success() {

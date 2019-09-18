@@ -15,7 +15,7 @@ fn main() {
 
 // We write a function so that we can return a `Result` and use `?`
 fn actual_main() -> Result<()> {
-    let dlr = Downloader::new()?;
+    let dlr = Downloader::new();
     let scraper = dlr.main_page()?;
 
     // Get the data...

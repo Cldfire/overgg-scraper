@@ -194,7 +194,7 @@ mod test {
 
     #[test]
     fn completed_matches_brief() {
-        let dl = Downloader::new().unwrap();
+        let dl = Downloader::new();
         let scraper = dl.main_page().unwrap();
         let matches = scraper.matches_brief(Completed);
 
@@ -223,7 +223,7 @@ mod test {
 
     #[test]
     fn future_matches_brief() {
-        let dl = Downloader::new().unwrap();
+        let dl = Downloader::new();
         let scraper = dl.main_page().unwrap();
         let matches = scraper.matches_brief(InFuture);
 
@@ -251,7 +251,7 @@ mod test {
 
     #[test]
     fn live_matches_brief() {
-        let dl = Downloader::new().unwrap();
+        let dl = Downloader::new();
         let scraper = dl.main_page().unwrap();
         let matches = scraper.matches_brief(Live);
 
@@ -274,7 +274,7 @@ mod test {
 
     #[test]
     fn live_streams() {
-        let dl = Downloader::new().unwrap();
+        let dl = Downloader::new();
         let scraper = dl.main_page().unwrap();
         let streams = scraper.live_streams();
 
