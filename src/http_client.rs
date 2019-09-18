@@ -2,9 +2,9 @@
 //!
 //! This module can be disabled by building this crate without default features.
 
-use error::*;
+use crate::error::*;
 use reqwest::{Client, IntoUrl};
-use scrapers::main_page::MainPageScraper;
+use crate::scrapers::main_page::MainPageScraper;
 use std::io::Read;
 
 /// A quick, built-in way to grab HTML from the live site.

@@ -2,6 +2,7 @@
 name = "overgg-scraper"
 version = "0.1.0"
 authors = ["Cldfire"]
+edition = "2018"
 
 [dependencies]
 error-chain = { version = "0.12", default-features = false }

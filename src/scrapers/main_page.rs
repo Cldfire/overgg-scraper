@@ -3,13 +3,13 @@
 use super::load_sels;
 use scraper::Html;
 use chrono::{Utc, TimeZone, LocalResult};
-use data_structs::{
+use crate::data_structs::{
     MatchBriefInfo,
     MatchBriefType,
     Livestreams,
     LivestreamInfo
 };
-use data_structs::MatchBriefType::*;
+use crate::data_structs::MatchBriefType::*;
 
 const MATCHES_BRIEF_SELECTORS_STR: &'static str = include_str!("../../selectors/matches_brief.toml");
 const LIVE_STREAMS_SELECTORS_STR: &'static str = include_str!("../../selectors/live_streams.toml");
@@ -190,7 +190,7 @@ impl MainPageScraper {
 #[cfg(not(feature = "test-local-data"))]
 mod test {
     use super::*;
-    use http_client::Downloader;
+    use crate::http_client::Downloader;
 
     #[test]
     fn completed_matches_brief() {
