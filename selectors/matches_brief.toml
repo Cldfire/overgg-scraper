@@ -1,5 +1,6 @@
-matches = "div.wf-module.wf-card.mod-home-matches"
-header = "div.wf-module-header"
+matches-upcoming = "div.js-home-matches-upcoming"
+matches-completed = "div.js-home-matches-completed"
+header = "a.wf-label.mod-sidebar"
 match = "a.wf-module-item.mod-match"
 live = "div.h-match-eta.mod-live"
 event_name = "div.h-match-preview-event"

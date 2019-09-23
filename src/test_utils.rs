@@ -1,4 +1,4 @@
-use data_structs::MatchBriefInfo;
+use crate::data_structs::MatchBriefInfo;
 use std::path::Path;
 use std::fs::File;
 use std::io::BufReader;
@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use error::*;
+use crate::error::*;
 
 #[derive(Debug, PartialEq)]
 #[derive(Serialize, Deserialize)]

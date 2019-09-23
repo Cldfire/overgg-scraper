@@ -60,7 +60,7 @@ extern crate scraper;
 extern crate chrono;
 extern crate toml;
 extern crate serde;
-#[macro_use]
+#[cfg_attr(feature = "test-local-data", macro_use)]
 extern crate serde_derive;
 #[cfg(all(feature = "test-local-data", test))]
 extern crate serde_json;

@@ -37,84 +37,78 @@ impl MainPageScraper {
     pub fn matches_brief(&self, _type: MatchBriefType) -> Vec<MatchBriefInfo> {
         let mut matches_info = vec![];
         let selectors = load_sels(MATCHES_BRIEF_SELECTORS_STR);
+        let matches_selector = match _type {
+            MatchBriefType::Completed => &selectors["matches-completed"],
+            MatchBriefType::InFuture | MatchBriefType::Live => &selectors["matches-upcoming"]
+        };
 
-        // First we get the lists of upcoming / completed matches
-        for list in self.doc.select(&selectors["matches"]) {
-            if_chain! {
-                if let Some(elem) = list.select(&selectors["header"]).next();
-                let header_text = elem.text().collect::<String>();
-                if header_text.trim() == String::from(_type);
-
-            then {
-                // Now we get the match type we want
-                let matches: Vec<::scraper::ElementRef> = 
-                    list.select(&selectors["match"]).filter(|e| {
-                        // If we want live matches, we need to do some filtering
-                        if _type == Live {
-                            e.select(&selectors["live"]).next().is_some()
-                        // If we want future matches, we need to do filtering too
-                        } else if _type == InFuture {
-                            e.select(&selectors["live"]).next().is_none()
-                        // No filtering is required for completed matches
-                        } else if _type == Completed {
-                            true
-                        } else {
-                            unimplemented!();
-                        }
-                    }).collect();
-
-                // Finally we get information for each match
-                for _match in matches {
-                    let mut match_info = MatchBriefInfo::default();
-
-                    // Event name
-                    if let Some(elem) = _match.select(&selectors["event_name"]).next() {
-                        match_info.event.name = elem.text().collect::<String>().trim().into();
+        // Get the correct list of matches for the type we are looking for
+        if let Some(list) = self.doc.select(matches_selector).next() {
+            // Now we get the match type we want
+            let matches: Vec<::scraper::ElementRef> = 
+                list.select(&selectors["match"]).filter(|e| {
+                    // If we want live matches, we need to do some filtering
+                    if _type == Live {
+                        e.select(&selectors["live"]).next().is_some()
+                    // If we want future matches, we need to do filtering too
+                    } else if _type == InFuture {
+                        e.select(&selectors["live"]).next().is_none()
+                    // No filtering is required for completed matches
+                    } else if _type == Completed {
+                        true
+                    } else {
+                        unimplemented!();
                     }
+                }).collect();
 
-                    // Event series
-                    if let Some(elem) = _match.select(&selectors["event_series"]).next() {
-                        match_info.event.series = elem.text().collect::<String>().trim().into();
-                    }
+            // Finally we get information for each match
+            for _match in matches {
+                let mut match_info = MatchBriefInfo::default();
 
-                    let teams_sel = &selectors["teams"];
-                    let mut teams = _match.select(teams_sel);
-
-                    for i in 0..2 {
-                        if let Some(team) = teams.next() {
-                            // Team name
-                            if let Some(elem) = team.select(&selectors["team_name"]).next() {
-                                match_info.teams[i].name = elem.text().collect::<String>().trim().into();
-                            }
-
-                            // Team won maps count
-                            if let Some(elem) = team.select(&selectors["team_score"]).next() {
-                                match_info.teams[i].maps_won = elem.text()
-                                                                   .collect::<String>()
-                                                                   .trim()
-                                                                   .parse()
-                                                                   .ok();
-                            }
-                        }
-                    }
-
-                    // Scheduled match time
-                    if_chain! {
-                        if let Some(elem) = _match.select(&selectors["match_scheduled_time"]).next();
-                        // TODO: Get attr keys in file
-                        if let Some(val) = elem.value().attr("data-utc-ts");
-                        if let Ok(timestamp) = val.trim().parse();
-                        if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0);
-
-                    then {
-                        match_info.scheduled_time = Some(datetime);
-                    }}
-
-                    matches_info.push(match_info);
+                // Event name
+                if let Some(elem) = _match.select(&selectors["event_name"]).next() {
+                    match_info.event.name = elem.text().collect::<String>().trim().into();
                 }
 
-                break;
-            }}
+                // Event series
+                if let Some(elem) = _match.select(&selectors["event_series"]).next() {
+                    match_info.event.series = elem.text().collect::<String>().trim().into();
+                }
+
+                let mut teams = _match.select(&selectors["teams"]);
+
+                for i in 0..2 {
+                    if let Some(team) = teams.next() {
+                        // Team name
+                        if let Some(elem) = team.select(&selectors["team_name"]).next() {
+                            match_info.teams[i].name = elem.text().collect::<String>().trim().into();
+                        }
+
+                        // Team won maps count
+                        if let Some(elem) = team.select(&selectors["team_score"]).next() {
+                            match_info.teams[i].maps_won = elem.text()
+                                                                .collect::<String>()
+                                                                .trim()
+                                                                .parse()
+                                                                .ok();
+                        }
+                    }
+                }
+
+                // Scheduled match time
+                if_chain! {
+                    if let Some(elem) = _match.select(&selectors["match_scheduled_time"]).next();
+                    // TODO: Get attr keys in file
+                    if let Some(val) = elem.value().attr("data-utc-ts");
+                    if let Ok(timestamp) = val.trim().parse();
+                    if let LocalResult::Single(datetime) = Utc.timestamp_opt(timestamp, 0);
+
+                then {
+                    match_info.scheduled_time = Some(datetime);
+                }}
+
+                matches_info.push(match_info);
+            }
         }
 
         matches_info
@@ -134,52 +128,43 @@ impl MainPageScraper {
         let mut live_streams = Livestreams::default();
         let selectors = load_sels(LIVE_STREAMS_SELECTORS_STR);
 
-        // First we have to find the card that contains the livestream information
-        for card in self.doc.select(&selectors["cards"]) {
-            if_chain! {
-                if let Some(elem) = card.select(&selectors["header"]).next();
-                let header_text = elem.text().collect::<String>();
-                if header_text.trim() == "Live Streams";
+        // Find the panel that contains the cards for streams
+        if let Some(streams) = self.doc.select(&selectors["streams"]).next() {
+            // Now we extract the info for each stream
+            for stream in streams.select(&selectors["stream_cards"]) {
+                let mut stream_info = LivestreamInfo::default();
 
-            then {
-                // Now we extract the info for each stream
-                for stream in card.select(&selectors["stream"]) {
-                    let mut stream_info = LivestreamInfo::default();
-
-                    // Stream name
-                    if let Some(elem) = stream.select(&selectors["stream_name"]).next() {
-                        stream_info.name = elem.text().collect::<String>().trim().into();
-                    }
-
-                    // Stream title
-                    if let Some(val) = stream.value().attr("title") {
-                        stream_info.title = Some(val.trim().into());
-                    }
-
-                    // Stream viewer count
-                    if let Some(elem) = stream.select(&selectors["stream_viewer_count"]).next() {
-                        stream_info.viewer_count = elem.text()
-                                                       .collect::<String>()
-                                                       .trim()
-                                                       .parse()
-                                                       .ok();
-                    }
-
-                    // Stream URL
-                    if let Some(val) = stream.value().attr("href") {
-                        stream_info.url = val.trim().into();
-                    }
-
-                    // We determine which vector the stream belongs in based on
-                    // the presence of a flag (seems to be an accurate way to do it)
-                    match stream.select(&selectors["flag"]).next() {
-                        Some(_) => live_streams.curated.push(stream_info),
-                        None => live_streams.other_top.push(stream_info)
-                    }
+                // Stream name
+                if let Some(elem) = stream.select(&selectors["stream_name"]).next() {
+                    stream_info.name = elem.text().collect::<String>().trim().into();
                 }
 
-                break;
-            }}
+                // Stream title
+                if let Some(val) = stream.value().attr("title") {
+                    stream_info.title = Some(val.trim().into());
+                }
+
+                // Stream viewer count
+                if let Some(elem) = stream.select(&selectors["stream_viewer_count"]).next() {
+                    stream_info.viewer_count = elem.text()
+                                                    .collect::<String>()
+                                                    .trim()
+                                                    .parse()
+                                                    .ok();
+                }
+
+                // Stream URL
+                if let Some(val) = stream.value().attr("href") {
+                    stream_info.url = val.trim().into();
+                }
+
+                // We determine which vector the stream belongs in based on
+                // the presence of a flag (seems to be an accurate way to do it)
+                match stream.select(&selectors["flag"]).next() {
+                    Some(_) => live_streams.curated.push(stream_info),
+                    None => live_streams.other_top.push(stream_info)
+                }
+            }
         }
 
         live_streams
@@ -289,7 +274,7 @@ mod test {
 #[cfg(feature = "test-local-data")]
 mod test_local_data {
     use super::*;
-    use test_utils::*;
+    use crate::test_utils::*;
 
     const TEST_DATA_MAIN_PAGE: &'static str = include_str!("../../test_data/www.over.gg.html");
     const COMPLETED_MATCHES_BRIEF_PATH: &'static str = "test_data/completed_matches_brief.json";
