@@ -37,7 +37,7 @@ pub enum Team {
     One
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct MatchBriefInfo {
     pub event: EventInfo,
@@ -75,28 +75,28 @@ impl MatchBriefInfo {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct TeamCompletedMatchBriefInfo {
     pub name: String,
     pub maps_won: Option<u8>
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct EventInfo {
     pub name: String,
     pub series: String
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct Livestreams {
     pub curated: Vec<LivestreamInfo>,
     pub other_top: Vec<LivestreamInfo>
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "derive-serde", derive(Serialize, Deserialize))]
 pub struct LivestreamInfo {
     pub name: String,
